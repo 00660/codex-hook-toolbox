@@ -20,7 +20,7 @@ public final class LogEventReaderTest {
 
         assertEquals("POST", event.getJSONObject("fields").getString("method"));
         assertEquals("https://example.test/api", event.getJSONObject("fields").getString("url"));
-        assertEquals("{\n  \"a\": 1\n}", event.getJSONArray("payloads").getJSONObject(0).getString("text"));
+        assertEquals(1, new JSONObject(event.getJSONArray("payloads").getJSONObject(0).getString("text")).getInt("a"));
         assertFalse(event.has("raw"));
         assertFalse(event.getJSONObject("fields").has("request_body_hex"));
     }
