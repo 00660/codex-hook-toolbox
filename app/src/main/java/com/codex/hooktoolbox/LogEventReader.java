@@ -76,13 +76,17 @@ final class LogEventReader {
     }
 
     private void parseBlocks(String text, String source, Deque<Event> target) {
-        String[] blocks = text.split("(?m)^---\\s*$");
+        String[] blocks = splitBlocks(text);
         for (String block : blocks) {
             LinkedHashMap<String, String> fields = fields(block);
             String name = fields.getOrDefault("event", "");
             if (name.isEmpty()) continue;
             target.addLast(new Event(source, name, fields, block.trim(), isCryptoNoise(name), isMetadata(name)));
         }
+    }
+
+    static String[] splitBlocks(String text) {
+        return text.split("(?m)^---\\s*$|(?=^event=)");
     }
 
     private static LinkedHashMap<String, String> fields(String block) {

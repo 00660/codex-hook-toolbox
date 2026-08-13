@@ -73,6 +73,19 @@ public final class PayloadDecoderTest {
         assertTrue(result.encoding.contains("chunked"));
     }
 
+    @Test
+    public void splitsRealLogRecordsWithoutLegacySeparators() {
+        String log = "truncated_previous_hex\n"
+                + "event=MessageDigest.update\ntime_ms=1\ninput_hex=4d616e6966657374\n"
+                + "event=Cipher.doFinal\ntime_ms=2\noutput_hex=706c61696e74657874\n";
+
+        String[] blocks = LogEventReader.splitBlocks(log);
+
+        assertEquals(3, blocks.length);
+        assertTrue(blocks[1].startsWith("event=MessageDigest.update"));
+        assertTrue(blocks[2].startsWith("event=Cipher.doFinal"));
+    }
+
     private static String hex(byte[] data) {
         StringBuilder value = new StringBuilder(data.length * 2);
         for (byte b : data) value.append(String.format(Locale.US, "%02x", b));
