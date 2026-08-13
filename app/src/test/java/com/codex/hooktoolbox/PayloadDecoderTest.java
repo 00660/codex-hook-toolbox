@@ -35,12 +35,23 @@ public final class PayloadDecoderTest {
     }
 
     @Test
-    public void fallsBackToGb18030() {
+    public void decodesDeclaredGb18030() {
         byte[] value = "中文明文".getBytes(Charset.forName("GB18030"));
-        PayloadDecoder.Decoded result = PayloadDecoder.decodeHex(hex(value), "");
+        PayloadDecoder.Decoded result = PayloadDecoder.decodeHex(hex(value), "Content-Type: text/plain; charset=GB18030");
 
         assertEquals("中文明文", result.text);
         assertEquals("GB18030", result.encoding);
+        assertFalse(result.binary);
+    }
+
+    @Test
+    public void doesNotGuessGb18030WithoutCharsetHint() {
+        byte[] value = "中文明文".getBytes(Charset.forName("GB18030"));
+        PayloadDecoder.Decoded result = PayloadDecoder.decodeHex(hex(value), "Cipher.doFinal");
+
+        assertEquals("", result.text);
+        assertEquals("binary/ciphertext", result.encoding);
+        assertTrue(result.binary);
     }
 
     @Test

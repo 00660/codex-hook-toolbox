@@ -57,8 +57,11 @@ final class PayloadDecoder {
         String text = decodeText(derived, StandardCharsets.UTF_8);
         String charset = "UTF-8";
         if (text == null) {
-            text = decodeText(derived, Charset.forName("GB18030"));
-            charset = "GB18030";
+            String declaredCharset = declaredChineseCharset(lowerHints);
+            if (declaredCharset != null) {
+                text = decodeText(derived, Charset.forName(declaredCharset));
+                charset = declaredCharset;
+            }
         }
         if (text == null) {
             return new Decoded(normalized, "", transform.isEmpty() ? "binary/ciphertext" : transform + " binary",
@@ -75,6 +78,13 @@ final class PayloadDecoder {
         if (!formatted.equals(text)) transform = transform.isEmpty() ? "json" : transform + "+json";
         String encoding = transform.isEmpty() ? charset : transform + " / " + charset;
         return new Decoded(normalized, formatted, encoding, false, truncated);
+    }
+
+    private static String declaredChineseCharset(String hints) {
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("(?:^|[^a-z0-9])(gb18030|gbk|gb2312)(?:$|[^a-z0-9])")
+                .matcher(hints);
+        return matcher.find() ? matcher.group(1).toUpperCase(Locale.ROOT) : null;
     }
 
     private static byte[] fromHex(String hex) {
