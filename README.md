@@ -13,6 +13,10 @@
 - 不写入当前 ROM 不存在的 `/data/temp/pine-crypto-dump.*`。
 - 原始 Hex 始终保留，ASCII、UTF-8、GB18030、JSON、Gzip、Deflate 与 Brotli 结果属于派生视图。
 
+实时抓包由前台服务持有四个常驻 `tail -n 0 -F` 流，只解析 Hook 新追加的完整记录。
+主界面和悬浮窗共享有界内存事件队列，不再周期性执行 `stat`、`su` 和文件尾全量读取。
+目标应用从已安装用户应用列表选择，事件页直接展示连接地址、请求/回包方向和可解码的明文正文。
+
 旧 `com.codex.devicetools` 使用未知平台私钥和 `android.uid.system`，本工程使用独立包名 `com.codex.hooktoolbox`，通过设备现有 `su` 获取授权。
 
 设备首次安装后，可通过 `device-grant-root.sh` 为工具箱当前 UID 写入既有

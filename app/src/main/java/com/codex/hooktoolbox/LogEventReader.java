@@ -117,6 +117,16 @@ final class LogEventReader {
         return text.split("(?m)^---\\s*$|(?=^event=)");
     }
 
+    static JSONObject parseLiveBlock(String source, String block) throws JSONException {
+        LinkedHashMap<String, String> eventFields = fields(block);
+        String name = eventFields.getOrDefault("event", "");
+        if (name.isEmpty()) return null;
+        JSONObject event = new Event(source, name, eventFields, block.trim(),
+                isCryptoNoise(name), isMetadata(name)).toJson();
+        event.remove("raw");
+        return event;
+    }
+
     private static LinkedHashMap<String, String> fields(String block) {
         LinkedHashMap<String, String> fields = new LinkedHashMap<>();
         for (String line : block.split("\\n")) {
@@ -128,7 +138,7 @@ final class LogEventReader {
 
     private static boolean isMetadata(String event) {
         String normalized = event.toLowerCase(java.util.Locale.ROOT);
-        return normalized.startsWith("socket.") || normalized.startsWith("dns.");
+        return normalized.startsWith("socket.send") || normalized.startsWith("socket.recv");
     }
 
     private static boolean isCryptoNoise(String event) {
@@ -153,7 +163,7 @@ final class LogEventReader {
         }
     }
 
-    private static final class Event {
+    static final class Event {
         final String source;
         final String name;
         final LinkedHashMap<String, String> fields;
@@ -184,7 +194,7 @@ final class LogEventReader {
             JSONArray payloads = new JSONArray();
             String hints = String.join(" ", fields.values());
             for (Map.Entry<String, String> entry : fields.entrySet()) {
-                allFields.put(entry.getKey(), entry.getValue());
+                if (!entry.getKey().endsWith("_hex")) allFields.put(entry.getKey(), entry.getValue());
                 if (entry.getKey().endsWith("_hex") && entry.getValue().matches("(?i)[0-9a-f\\s]+")) {
                     PayloadDecoder.Decoded decoded = PayloadDecoder.decodeHex(entry.getValue(), hints);
                     JSONObject payload = new JSONObject();
@@ -195,11 +205,26 @@ final class LogEventReader {
                     payload.put("binary", decoded.binary);
                     payload.put("truncated", decoded.truncated);
                     payloads.put(payload);
+                } else if (isTextPayload(entry.getKey()) && !entry.getValue().isEmpty()) {
+                    JSONObject payload = new JSONObject();
+                    payload.put("field", entry.getKey());
+                    payload.put("rawHex", "");
+                    payload.put("text", entry.getValue());
+                    payload.put("encoding", "UTF-8");
+                    payload.put("binary", false);
+                    payload.put("truncated", false);
+                    payloads.put(payload);
                 }
             }
             json.put("fields", allFields);
             json.put("payloads", payloads);
             return json;
+        }
+
+        private static boolean isTextPayload(String key) {
+            return "request_body".equals(key) || "response_body".equals(key) || "body".equals(key)
+                    || "plain".equals(key) || "request_headers".equals(key) || "response_headers".equals(key)
+                    || "headers".equals(key) || "header".equals(key);
         }
 
         long timeMs() {

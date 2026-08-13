@@ -15,7 +15,7 @@
 * { box-sizing: border-box; letter-spacing: 0; }
 html, body { background: var(--bg); }
 body { margin: 0; color: var(--text); font: 14px/1.45 system-ui, sans-serif; min-height: 100vh; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button { color: inherit; }
 svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .svg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
@@ -31,8 +31,8 @@ main { padding: 16px 16px calc(86px + env(safe-area-inset-bottom)); max-width: 8
 .icon-button.solid { color: white; background: var(--accent); border-color: var(--accent); }
 .target-row label, .trace-controls > label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; font-weight: 650; }
 .target-input { display: grid; grid-template-columns: 1fr 40px; gap: 8px; }
-.target-input input { min-width: 0; height: 40px; padding: 0 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); color: var(--text); font-family: var(--mono); outline: none; }
-.target-input input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(20,125,100,.12); }
+.target-input select { min-width: 0; height: 40px; padding: 0 34px 0 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); color: var(--text); outline: none; }
+.target-input select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(20,125,100,.12); }
 .health-strip { margin: 12px 0 22px; padding: 10px 0; display: flex; flex-wrap: wrap; gap: 9px 16px; border-block: 1px solid var(--line); color: var(--muted); font-size: 11px; }
 .health-strip span { display: flex; gap: 5px; align-items: center; white-space: nowrap; }
 .health-strip i { width: 7px; height: 7px; border-radius: 50%; background: #aeb5b0; }
@@ -73,12 +73,19 @@ main { padding: 16px 16px calc(86px + env(safe-area-inset-bottom)); max-width: 8
 .segmented.two { grid-template-columns: 1fr 1fr; }
 .segmented button { min-width: 0; height: 34px; padding: 0 5px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
 .segmented button.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px #0001; font-weight: 650; }
+.live-controls { margin: 10px 0; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.live-controls > label { min-height: 58px; padding: 9px 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.live-controls > label + label { border-top: 1px solid var(--line); }
+.live-controls b, .live-controls small { display: block; }
+.live-controls small { margin-top: 2px; color: var(--muted); font-size: 11px; }
 .event-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 14px; margin: 10px 2px; color: var(--muted); font-size: 11px; }
 .event-summary #filtered-count { margin-left: auto; }
 .noise-toggle { display: flex; align-items: center; gap: 4px; }
 .noise-toggle input { accent-color: var(--accent); }
 .event-list { display: grid; gap: 8px; }
 .event { overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.event.direction-outbound { border-left: 3px solid #1677ff; }
+.event.direction-inbound { border-left: 3px solid var(--ok); }
 .event-head { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; padding: 10px 11px; border-bottom: 1px solid var(--line); }
 .source-tag { padding: 2px 5px; border-radius: 3px; background: #e4efe9; color: var(--accent-dark); font: 650 10px var(--mono); }
 .event-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 12px var(--mono); }

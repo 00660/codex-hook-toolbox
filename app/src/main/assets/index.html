@@ -35,9 +35,9 @@
   <main>
     <section class="page active" data-page="overview">
       <div class="target-row">
-        <label for="package">目标包名</label>
+        <label for="package">目标应用</label>
         <div class="target-input">
-          <input id="package" value="com.moutai.mall" autocomplete="off" spellcheck="false">
+          <select id="package" aria-label="目标应用"><option value="com.moutai.mall">正在读取应用列表…</option></select>
           <button class="icon-button solid" id="launch" title="启动目标应用" aria-label="启动目标应用">
             <svg><use href="#play"/></svg>
           </button>
@@ -85,10 +85,14 @@
 
     <section class="page" data-page="events">
       <div class="section-heading sticky-heading">
-        <div><span class="eyebrow">LIVE EVENTS</span><h2>实时事件</h2></div>
-        <button class="icon-button" id="reload-events" title="读取新增日志" aria-label="读取新增日志">
+        <div><span class="eyebrow">LIVE PLAINTEXT</span><h2>实时明文抓包</h2></div>
+        <button class="icon-button" id="reload-events" title="刷新内存事件" aria-label="刷新内存事件">
           <svg><use href="#refresh-cw"/></svg>
         </button>
+      </div>
+      <div class="live-controls">
+        <label><span><b>实时读取</b><small id="live-state">已停止</small></span><span class="switch"><input id="live-toggle" type="checkbox"><span></span></span></label>
+        <label><span><b>悬浮抓包窗</b><small>显示最新请求与回包明文</small></span><span class="switch"><input id="overlay-toggle" type="checkbox"><span></span></span></label>
       </div>
       <div class="segmented" id="source-filter">
         <button class="active" data-source="all">全部</button>
@@ -99,8 +103,8 @@
       </div>
       <div class="event-summary">
         <span id="event-count">0 条事件</span>
-        <label class="noise-toggle"><input id="auto-events" type="checkbox" checked>自动刷新</label>
-        <label class="noise-toggle"><input id="include-noise" type="checkbox">显示 Digest/HMAC 噪声</label>
+        <span>常驻流式读取</span>
+        <label class="noise-toggle"><input id="include-noise" type="checkbox">显示高频 Socket 收发</label>
         <span id="filtered-count">过滤 0 条噪声</span>
       </div>
       <div id="events" class="event-list">

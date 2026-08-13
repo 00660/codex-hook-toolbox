@@ -1,7 +1,7 @@
 (function () {
   "use strict";
   var state = { source: "all", scope: "uid", page: "overview", traceTimer: null,
-    eventTimer: null, eventLoading: false, eventSignature: "", status: null };
+    eventLoading: false, eventSignature: "", liveTimer: null, status: null };
   var pending = new Map();
   var sequence = 0;
   var $ = function (selector) { return document.querySelector(selector); };
@@ -29,8 +29,28 @@
       pending.delete(id);
       if (result && result.ok) job.resolve(result);
       else job.reject(new Error(result && result.error ? result.error : "操作失败"));
+    },
+    onLiveEvent: function () {
+      if (state.page !== "events") return;
+      clearTimeout(state.liveTimer);
+      state.liveTimer = setTimeout(loadEvents, 100);
+    },
+    onLiveState: function (running, packageName, error) {
+      $("#live-toggle").checked = Boolean(running);
+      $("#live-state").textContent = running ? "正在读取 " + packageName : (error || "已停止");
     }
   };
+
+  async function loadApps() {
+    var selected = pkg() || "com.moutai.mall";
+    var result = await request("apps");
+    $("#package").innerHTML = result.apps.map(function (app) {
+      return '<option value="' + escapeHtml(app.packageName) + '">' + escapeHtml(app.label)
+        + " · " + escapeHtml(app.packageName) + "</option>";
+    }).join("");
+    var exists = result.apps.some(function (app) { return app.packageName === selected; });
+    $("#package").value = exists ? selected : (result.apps[0] ? result.apps[0].packageName : "");
+  }
 
   function toast(message, error) {
     var node = $("#toast");
@@ -130,7 +150,10 @@
     $("#event-count").textContent = result.events.length + " 条事件";
     $("#filtered-count").textContent = "过滤 " + result.filtered + " 条噪声";
     var signature = result.source + "|" + result.includeNoise + "|" + result.events.map(function (event) {
-      return event.source + ":" + event.timeMs + ":" + event.event + ":" + event.raw.length;
+      var payloadSize = (event.payloads || []).reduce(function (size, payload) {
+        return size + (payload.rawHex || "").length + (payload.text || "").length;
+      }, 0);
+      return event.source + ":" + event.timeMs + ":" + event.event + ":" + payloadSize;
     }).join("|");
     if (signature === state.eventSignature) return;
     state.eventSignature = signature;
@@ -140,24 +163,33 @@
     }
     $("#events").innerHTML = result.events.map(function (event, eventIndex) {
       var fields = event.fields || {};
-      var meta = ["pid", "thread", "algorithm", "op", "method", "url", "response_code"]
+      var directionLabel = { outbound:"请求", inbound:"回包", connect:"连接", dns:"DNS" }[event.direction] || event.direction;
+      var meta = ["method", "url", "effective_url", "response_code", "status", "hostname",
+        "remote_address", "remote_port", "pid", "thread", "algorithm", "op"]
         .filter(function (key) { return fields[key]; })
         .map(function (key) { return "<span>" + escapeHtml(key) + ": <b>" + escapeHtml(fields[key]) + "</b></span>"; })
         .join("");
       var payloads = (event.payloads || []).map(function (payload, payloadIndex) {
         var id = "payload-" + eventIndex + "-" + payloadIndex;
         var text = payload.binary ? "[二进制或密文，未强制转码]" : payload.text;
-        return '<details class="payload"><summary><span>' + escapeHtml(payload.field) + '</span><span>'
-          + escapeHtml(payload.encoding) + " · " + Math.floor(payload.rawHex.length / 2) + ' B</span></summary>'
+        var labels = { request_headers:"请求头", response_headers:"响应头", headers:"Header", header:"Header",
+          request_body:"请求明文", response_body:"回包明文", request_body_hex:"请求明文",
+          response_body_hex:"回包明文", input_hex:"输入明文", output_hex:"输出明文", plain_hex:"明文" };
+        if (!payload.binary && event.direction === "outbound" && /^(input|output|plain)_hex$/.test(payload.field)) labels[payload.field] = "请求明文";
+        if (!payload.binary && event.direction === "inbound" && /^(input|output|plain)_hex$/.test(payload.field)) labels[payload.field] = "回包明文";
+        var hexButton = payload.rawHex ? '<button data-view="hex" data-payload="' + id + '">原始 Hex</button>' : '';
+        var payloadBytes = payload.rawHex ? Math.floor(payload.rawHex.length / 2) : (payload.text || "").length;
+        return '<details class="payload"><summary><span>' + escapeHtml(labels[payload.field] || payload.field) + '</span><span>'
+          + escapeHtml(payload.encoding) + " · " + payloadBytes + ' B</span></summary>'
           + '<div class="payload-tabs"><button class="active" data-view="text" data-payload="' + id
-          + '">派生明文</button><button data-view="hex" data-payload="' + id + '">原始 Hex</button></div>'
+          + '">明文</button>' + hexButton + '</div>'
           + '<pre id="' + id + '" data-text="' + encodeURIComponent(text || "") + '" data-hex="'
           + encodeURIComponent(payload.rawHex) + '">' + escapeHtml(text || "") + "</pre></details>";
       }).join("");
-      return '<article class="event"><div class="event-head"><span class="source-tag">'
+      return '<article class="event direction-' + escapeHtml(event.direction) + '"><div class="event-head"><span class="source-tag">'
         + escapeHtml(sourceLabel(event.source)) + '</span><span class="event-name">' + escapeHtml(event.event)
         + '</span><time class="event-time">' + formatTime(event.timeMs) + '</time></div><div class="event-meta">'
-        + '<span>方向: <b>' + escapeHtml(event.direction) + "</b></span>" + meta + "</div>" + payloads + "</article>";
+        + '<span>方向: <b>' + escapeHtml(directionLabel) + "</b></span>" + meta + "</div>" + payloads + "</article>";
     }).join("");
   }
 
@@ -168,7 +200,7 @@
     state.eventLoading = true;
     try {
       if (button) button.disabled = true;
-      var result = await request("logs", { source: requestedSource, limit: 40,
+      var result = await request("liveEvents", { source: requestedSource, limit: 60,
         includeNoise: requestedNoise });
       if (requestedSource === state.source && requestedNoise === $("#include-noise").checked) {
         renderEvents(result);
@@ -180,15 +212,6 @@
       state.eventLoading = false;
       if (requestedSource !== state.source || requestedNoise !== $("#include-noise").checked) loadEvents();
     }
-  }
-
-  function updateEventPolling() {
-    clearInterval(state.eventTimer);
-    state.eventTimer = null;
-    if (state.page !== "events" || !$("#auto-events").checked) return;
-    state.eventTimer = setInterval(function () {
-      if (!document.hidden && !$("#events details[open]")) loadEvents();
-    }, 2000);
   }
 
   async function pollTrace() {
@@ -217,10 +240,9 @@
       $$(".bottom-nav button").forEach(function (item) { item.classList.toggle("active", item === button); });
       $$(".page").forEach(function (page) { page.classList.toggle("active", page.dataset.page === button.dataset.target); });
       state.page = button.dataset.target;
-      $("#page-title").textContent = {overview:"控制台",events:"实时事件",trace:"受控 Trace",
+      $("#page-title").textContent = {overview:"控制台",events:"实时抓包",trace:"受控 Trace",
         export:"证据导出",baseline:"真实基线"}[button.dataset.target];
       if (state.page === "events") loadEvents();
-      updateEventPolling();
     });
   });
 
@@ -246,13 +268,30 @@
   });
   $("#stop-all").addEventListener("click", function (event) {
     execute(event.currentTarget, async function () {
-      await request("stopAll"); await probe(); toast("全部采集已停止");
+      await request("stopAll");
+      $("#live-toggle").checked = false;
+      $("#overlay-toggle").checked = false;
+      $("#live-state").textContent = "已停止";
+      await probe(); toast("全部采集已停止");
     });
   });
   $("#reload-events").addEventListener("click", function (event) { loadEvents(event.currentTarget); });
-  $("#auto-events").addEventListener("change", function () {
-    updateEventPolling();
-    if (this.checked) loadEvents();
+  $("#live-toggle").addEventListener("change", function (event) {
+    var toggle = event.currentTarget;
+    execute(toggle, async function () {
+      if (toggle.checked) await request("liveStart", { floating: $("#overlay-toggle").checked });
+      else await request("liveStop");
+      var result = await request("liveState");
+      window.CodexApp.onLiveState(result.running, result.packageName, "");
+      loadEvents();
+    }).catch(function () { toggle.checked = !toggle.checked; });
+  });
+  $("#overlay-toggle").addEventListener("change", function (event) {
+    var toggle = event.currentTarget;
+    execute(toggle, async function () {
+      var result = await request("overlay", { enabled: toggle.checked });
+      if (result.needsPermission) toast("请授予悬浮窗权限后返回");
+    }).catch(function () { toggle.checked = !toggle.checked; });
   });
   $("#include-noise").addEventListener("change", function () {
     state.eventSignature = "";
@@ -267,7 +306,18 @@
     });
   });
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden && state.page === "events") loadEvents();
+    if (!document.hidden && state.page === "events") {
+      if ($("#overlay-toggle").checked) request("overlay", { enabled: true }).catch(function () {});
+      loadEvents();
+    }
+  });
+  $("#package").addEventListener("change", async function () {
+    state.eventSignature = "";
+    try {
+      if ($("#live-toggle").checked) await request("liveStart", { floating: $("#overlay-toggle").checked });
+      await probe();
+      if (state.page === "events") loadEvents();
+    } catch (error) { toast(error.message, true); }
   });
   $("#events").addEventListener("click", function (event) {
     var button = event.target.closest("[data-view]");
@@ -314,5 +364,9 @@
       });
     });
   });
-  probe().catch(function (error) { toast(error.message, true); });
+  loadApps().then(async function () {
+    await probe();
+    var live = await request("liveState");
+    window.CodexApp.onLiveState(live.running, live.packageName, "");
+  }).catch(function (error) { toast(error.message, true); });
 }());

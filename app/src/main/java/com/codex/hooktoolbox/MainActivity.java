@@ -2,7 +2,12 @@ package com.codex.hooktoolbox;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -13,14 +18,17 @@ import org.json.JSONObject;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public final class MainActivity extends Activity {
+public final class MainActivity extends Activity implements LiveCaptureService.Listener {
     private WebView webView;
     private ExecutorService worker;
     private TraceController traceController;
     private HookController hookController;
     private LogEventReader logReader;
     private ExportManager exportManager;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final AtomicBoolean liveDeliveryPending = new AtomicBoolean();
 
     @Override
     @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
@@ -31,6 +39,7 @@ public final class MainActivity extends Activity {
         hookController = new HookController();
         logReader = new LogEventReader();
         exportManager = new ExportManager(this, logReader);
+        LiveCaptureService.addListener(this);
 
         webView = new WebView(this);
         webView.setBackgroundColor(0xfff4f5f2);
@@ -56,6 +65,8 @@ public final class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        LiveCaptureService.removeListener(this);
+        mainHandler.removeCallbacksAndMessages(null);
         if (traceController != null) traceController.shutdown();
         if (worker != null) worker.shutdownNow();
         if (webView != null) {
@@ -92,10 +103,43 @@ public final class MainActivity extends Activity {
                         case "stopAll":
                             response = hookController.stopAll(pkg);
                             traceController.stop();
+                            LiveCaptureService.stop(MainActivity.this);
                             break;
                         case "logs":
                             response = logReader.read(pkg, request.optString("source", "all"),
                                     request.optInt("limit", 40), request.optBoolean("includeNoise", false));
+                            break;
+                        case "liveEvents":
+                            response = LiveCaptureService.events(request.optString("source", "all"),
+                                    request.optInt("limit", 40), request.optBoolean("includeNoise", false));
+                            break;
+                        case "liveState":
+                            response = LiveCaptureService.snapshot();
+                            break;
+                        case "liveStart":
+                            LiveCaptureService.start(MainActivity.this, pkg, request.optBoolean("floating", false));
+                            response.put("ok", true);
+                            response.put("running", true);
+                            break;
+                        case "liveStop":
+                            LiveCaptureService.stop(MainActivity.this);
+                            response.put("ok", true);
+                            response.put("running", false);
+                            break;
+                        case "overlay":
+                            boolean enabled = request.optBoolean("enabled", false);
+                            response.put("ok", true);
+                            response.put("needsPermission", enabled && !Settings.canDrawOverlays(MainActivity.this));
+                            if (enabled && !Settings.canDrawOverlays(MainActivity.this)) {
+                                runOnUiThread(() -> startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                        Uri.parse("package:" + getPackageName()))));
+                            } else {
+                                LiveCaptureService.setFloating(MainActivity.this, pkg, enabled);
+                            }
+                            break;
+                        case "apps":
+                            response.put("ok", true);
+                            response.put("apps", AppCatalog.userApps(MainActivity.this));
                             break;
                         case "traceStart":
                             response = traceController.start(pkg, request.optString("scope", "uid"),
@@ -134,5 +178,19 @@ public final class MainActivity extends Activity {
         runOnUiThread(() -> {
             if (webView != null) webView.evaluateJavascript(script, null);
         });
+    }
+
+    @Override public void onLiveEvent(JSONObject event) {
+        if (!liveDeliveryPending.compareAndSet(false, true)) return;
+        mainHandler.postDelayed(() -> {
+            liveDeliveryPending.set(false);
+            if (webView != null) webView.evaluateJavascript("window.CodexApp&&window.CodexApp.onLiveEvent();", null);
+        }, 120);
+    }
+
+    @Override public void onLiveState(boolean running, String packageName, String error) {
+        String script = "window.CodexApp&&window.CodexApp.onLiveState("
+                + running + "," + JSONObject.quote(packageName) + "," + JSONObject.quote(error) + ");";
+        runOnUiThread(() -> { if (webView != null) webView.evaluateJavascript(script, null); });
     }
 }
