@@ -33,6 +33,11 @@ android {
             signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+        validation {
+            initWith release
+            applicationIdSuffix '.validation'
+            matchingFallbacks = ['release']
+        }
     }
 
     compileOptions {

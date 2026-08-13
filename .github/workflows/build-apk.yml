@@ -28,9 +28,11 @@ jobs:
           CODEX_KEYSTORE_PASSWORD: ${{ secrets.CODEX_KEYSTORE_PASSWORD }}
           CODEX_KEY_ALIAS: ${{ secrets.CODEX_KEY_ALIAS }}
           CODEX_KEY_PASSWORD: ${{ secrets.CODEX_KEY_PASSWORD }}
-        run: ./gradlew testReleaseUnitTest assembleRelease --no-daemon
+        run: ./gradlew testReleaseUnitTest assembleRelease assembleValidation --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: codex-hook-toolbox-release
-          path: app/build/outputs/apk/release/app-release.apk
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/apk/validation/app-validation.apk
           if-no-files-found: error

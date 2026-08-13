@@ -2,9 +2,10 @@
 set -eu
 
 DATABASE=/data/adb/.vndcfg.db
-UID_VALUE=$(cmd package list packages -U com.codex.hooktoolbox 2>/dev/null \
+PACKAGE_NAME=${1:-com.codex.hooktoolbox}
+UID_VALUE=$(cmd package list packages -U "$PACKAGE_NAME" 2>/dev/null \
     | sed -n 's/.* uid:\([0-9][0-9]*\).*/\1/p' | head -n1)
-[ -n "$UID_VALUE" ] || { echo "未安装 com.codex.hooktoolbox" >&2; exit 2; }
+[ -n "$UID_VALUE" ] || { echo "未安装 $PACKAGE_NAME" >&2; exit 2; }
 
 BACKUP=/data/adb/.vndcfg.db.before-codex-hook-toolbox
 if [ ! -f "$BACKUP" ]; then
