@@ -1,5 +1,6 @@
 .gradle/
 build/
 app/build/
+artifacts/
 local.properties
 *.iml
