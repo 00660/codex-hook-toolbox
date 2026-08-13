@@ -12,14 +12,18 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 final class LogEventReader {
-    private static final long INITIAL_BYTES = 512 * 1024;
-    private static final long MAX_DELTA_BYTES = 1024 * 1024;
+    private static final long INITIAL_BYTES = 128 * 1024;
+    private static final long MAX_DELTA_BYTES = 256 * 1024;
     private static final int MAX_EVENTS = 320;
+    private static final Pattern EVENT_START = Pattern.compile("(?m)^event=");
     private static final List<String> SOURCES = Arrays.asList(
             "java-crypto.log", "conscrypt-crypto.log", "boringssl-crypto.log", "http-network.log");
     private final Map<String, Long> offsets = new HashMap<>();
+    private final Map<String, String> pendingBlocks = new HashMap<>();
     private final Map<String, Deque<Event>> events = new HashMap<>();
     synchronized JSONObject read(String packageName, String requestedSource, int requestedLimit,
                                  boolean includeNoise)
@@ -35,10 +39,11 @@ final class LogEventReader {
         }
         JSONArray array = new JSONArray();
         List<Event> snapshot = new ArrayList<>(targetEvents);
+        snapshot.sort((left, right) -> Long.compare(right.timeMs(), left.timeMs()));
         int accepted = 0;
         int hidden = 0;
-        for (int i = snapshot.size() - 1; i >= 0 && accepted < limit; i--) {
-            Event event = snapshot.get(i);
+        for (Event event : snapshot) {
+            if (accepted >= limit) break;
             if (!"all".equals(sourceFilter) && !event.source.equals(sourceFilter)) continue;
             if (event.metadata || (event.noise && !includeNoise)) {
                 hidden++;
@@ -47,11 +52,9 @@ final class LogEventReader {
             array.put(event.toJson());
             accepted++;
         }
-        JSONArray chronological = new JSONArray();
-        for (int i = array.length() - 1; i >= 0; i--) chronological.put(array.get(i));
         JSONObject result = new JSONObject();
         result.put("ok", true);
-        result.put("events", chronological);
+        result.put("events", array);
         result.put("filtered", hidden);
         result.put("includeNoise", includeNoise);
         result.put("source", sourceFilter);
@@ -64,25 +67,50 @@ final class LogEventReader {
         String key = path;
         Long oldValue = offsets.get(key);
         long old = oldValue == null ? Math.max(0, size - INITIAL_BYTES) : oldValue;
-        if (size < old) old = 0;
+        if (size < old) {
+            old = 0;
+            pendingBlocks.remove(key);
+        }
         long delta = size - old;
         offsets.put(key, size);
-        if (delta <= 0) return;
+        if (delta <= 0) {
+            flushPending(key, source, target);
+            return;
+        }
         long read = Math.min(delta, MAX_DELTA_BYTES);
+        if (delta > MAX_DELTA_BYTES) pendingBlocks.remove(key);
         RootShell.Result content = RootShell.run("tail -c " + read + " " + RootShell.quote(path), 20);
         if (!content.ok || content.output.isEmpty()) return;
-        parseBlocks(content.output, source, target);
+        parseStreaming(key, content.output, source, target);
         while (target.size() > MAX_EVENTS) target.removeFirst();
     }
 
-    private void parseBlocks(String text, String source, Deque<Event> target) {
-        String[] blocks = splitBlocks(text);
-        for (String block : blocks) {
-            LinkedHashMap<String, String> fields = fields(block);
-            String name = fields.getOrDefault("event", "");
-            if (name.isEmpty()) continue;
-            target.addLast(new Event(source, name, fields, block.trim(), isCryptoNoise(name), isMetadata(name)));
+    private void parseStreaming(String key, String delta, String source, Deque<Event> target) {
+        String text = pendingBlocks.getOrDefault(key, "") + delta;
+        Matcher matcher = EVENT_START.matcher(text);
+        List<Integer> starts = new ArrayList<>();
+        while (matcher.find()) starts.add(matcher.start());
+        if (starts.isEmpty()) {
+            pendingBlocks.remove(key);
+            return;
         }
+        for (int i = 0; i + 1 < starts.size(); i++) {
+            addEvent(text.substring(starts.get(i), starts.get(i + 1)), source, target);
+        }
+        pendingBlocks.put(key, text.substring(starts.get(starts.size() - 1)));
+    }
+
+    private void flushPending(String key, String source, Deque<Event> target) {
+        String block = pendingBlocks.remove(key);
+        if (block != null) addEvent(block, source, target);
+    }
+
+    private void addEvent(String block, String source, Deque<Event> target) {
+        LinkedHashMap<String, String> eventFields = fields(block);
+        String name = eventFields.getOrDefault("event", "");
+        if (name.isEmpty()) return;
+        target.addLast(new Event(source, name, eventFields, block.trim(),
+                isCryptoNoise(name), isMetadata(name)));
     }
 
     static String[] splitBlocks(String text) {
@@ -99,11 +127,13 @@ final class LogEventReader {
     }
 
     private static boolean isMetadata(String event) {
-        return event.startsWith("Socket.") || event.startsWith("Dns.");
+        String normalized = event.toLowerCase(java.util.Locale.ROOT);
+        return normalized.startsWith("socket.") || normalized.startsWith("dns.");
     }
 
     private static boolean isCryptoNoise(String event) {
-        return event.contains("Digest") || event.startsWith("Mac.") || event.contains("HMAC");
+        String normalized = event.toLowerCase(java.util.Locale.ROOT);
+        return normalized.contains("digest") || normalized.startsWith("mac.") || normalized.contains("hmac");
     }
 
     private static String normalizeSource(String source) {
@@ -145,7 +175,7 @@ final class LogEventReader {
             JSONObject json = new JSONObject();
             json.put("source", source);
             json.put("event", name);
-            json.put("timeMs", numericTime(fields));
+            json.put("timeMs", timeMs());
             json.put("direction", direction(fields, name));
             json.put("raw", raw);
             json.put("noise", noise);
@@ -170,6 +200,10 @@ final class LogEventReader {
             json.put("fields", allFields);
             json.put("payloads", payloads);
             return json;
+        }
+
+        long timeMs() {
+            return numericTime(fields);
         }
 
         private static long numericTime(Map<String, String> fields) {

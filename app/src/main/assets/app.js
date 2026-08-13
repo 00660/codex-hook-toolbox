@@ -1,6 +1,7 @@
 (function () {
   "use strict";
-  var state = { source: "all", scope: "uid", traceTimer: null, status: null };
+  var state = { source: "all", scope: "uid", page: "overview", traceTimer: null,
+    eventTimer: null, eventLoading: false, eventSignature: "", status: null };
   var pending = new Map();
   var sequence = 0;
   var $ = function (selector) { return document.querySelector(selector); };
@@ -128,8 +129,13 @@
   function renderEvents(result) {
     $("#event-count").textContent = result.events.length + " 条事件";
     $("#filtered-count").textContent = "过滤 " + result.filtered + " 条噪声";
+    var signature = result.source + "|" + result.includeNoise + "|" + result.events.map(function (event) {
+      return event.source + ":" + event.timeMs + ":" + event.event + ":" + event.raw.length;
+    }).join("|");
+    if (signature === state.eventSignature) return;
+    state.eventSignature = signature;
     if (!result.events.length) {
-      $("#events").innerHTML = '<div class="empty-state"><svg><use href="icons.svg#activity"/></svg><p>没有新的可展示事件</p></div>';
+      $("#events").innerHTML = '<div class="empty-state"><svg><use href="#activity"/></svg><p>没有可展示事件</p></div>';
       return;
     }
     $("#events").innerHTML = result.events.map(function (event, eventIndex) {
@@ -156,11 +162,33 @@
   }
 
   async function loadEvents(button) {
-    return execute(button || null, async function () {
-      var result = await request("logs", { source: state.source, limit: 40,
-        includeNoise: $("#include-noise").checked });
-      renderEvents(result);
-    });
+    if (state.eventLoading) return;
+    var requestedSource = state.source;
+    var requestedNoise = $("#include-noise").checked;
+    state.eventLoading = true;
+    try {
+      if (button) button.disabled = true;
+      var result = await request("logs", { source: requestedSource, limit: 40,
+        includeNoise: requestedNoise });
+      if (requestedSource === state.source && requestedNoise === $("#include-noise").checked) {
+        renderEvents(result);
+      }
+    } catch (error) {
+      toast(error.message, true);
+    } finally {
+      if (button) button.disabled = false;
+      state.eventLoading = false;
+      if (requestedSource !== state.source || requestedNoise !== $("#include-noise").checked) loadEvents();
+    }
+  }
+
+  function updateEventPolling() {
+    clearInterval(state.eventTimer);
+    state.eventTimer = null;
+    if (state.page !== "events" || !$("#auto-events").checked) return;
+    state.eventTimer = setInterval(function () {
+      if (!document.hidden && !$("#events details[open]")) loadEvents();
+    }, 2000);
   }
 
   async function pollTrace() {
@@ -188,8 +216,11 @@
     button.addEventListener("click", function () {
       $$(".bottom-nav button").forEach(function (item) { item.classList.toggle("active", item === button); });
       $$(".page").forEach(function (page) { page.classList.toggle("active", page.dataset.page === button.dataset.target); });
+      state.page = button.dataset.target;
       $("#page-title").textContent = {overview:"控制台",events:"实时事件",trace:"受控 Trace",
         export:"证据导出",baseline:"真实基线"}[button.dataset.target];
+      if (state.page === "events") loadEvents();
+      updateEventPolling();
     });
   });
 
@@ -219,13 +250,24 @@
     });
   });
   $("#reload-events").addEventListener("click", function (event) { loadEvents(event.currentTarget); });
-  $("#include-noise").addEventListener("change", function () { loadEvents(); });
+  $("#auto-events").addEventListener("change", function () {
+    updateEventPolling();
+    if (this.checked) loadEvents();
+  });
+  $("#include-noise").addEventListener("change", function () {
+    state.eventSignature = "";
+    loadEvents();
+  });
   $$("#source-filter button").forEach(function (button) {
     button.addEventListener("click", function () {
       $$("#source-filter button").forEach(function (item) { item.classList.toggle("active", item === button); });
       state.source = button.dataset.source;
+      state.eventSignature = "";
       loadEvents();
     });
+  });
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && state.page === "events") loadEvents();
   });
   $("#events").addEventListener("click", function (event) {
     var button = event.target.closest("[data-view]");

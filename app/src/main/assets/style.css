@@ -73,7 +73,8 @@ main { padding: 16px 16px calc(86px + env(safe-area-inset-bottom)); max-width: 8
 .segmented.two { grid-template-columns: 1fr 1fr; }
 .segmented button { min-width: 0; height: 34px; padding: 0 5px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
 .segmented button.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px #0001; font-weight: 650; }
-.event-summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; margin: 10px 2px; color: var(--muted); font-size: 11px; }
+.event-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 14px; margin: 10px 2px; color: var(--muted); font-size: 11px; }
+.event-summary #filtered-count { margin-left: auto; }
 .noise-toggle { display: flex; align-items: center; gap: 4px; }
 .noise-toggle input { accent-color: var(--accent); }
 .event-list { display: grid; gap: 8px; }
