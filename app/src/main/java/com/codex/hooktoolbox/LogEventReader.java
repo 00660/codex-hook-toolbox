@@ -40,7 +40,7 @@ final class LogEventReader {
         for (int i = snapshot.size() - 1; i >= 0 && accepted < limit; i--) {
             Event event = snapshot.get(i);
             if (!"all".equals(sourceFilter) && !event.source.equals(sourceFilter)) continue;
-            if (event.noise && !includeNoise) {
+            if (event.metadata || (event.noise && !includeNoise)) {
                 hidden++;
                 continue;
             }
@@ -81,7 +81,7 @@ final class LogEventReader {
             LinkedHashMap<String, String> fields = fields(block);
             String name = fields.getOrDefault("event", "");
             if (name.isEmpty()) continue;
-            target.addLast(new Event(source, name, fields, block.trim(), isNoise(name)));
+            target.addLast(new Event(source, name, fields, block.trim(), isCryptoNoise(name), isMetadata(name)));
         }
     }
 
@@ -94,9 +94,12 @@ final class LogEventReader {
         return fields;
     }
 
-    private static boolean isNoise(String event) {
-        return event.startsWith("Socket.") || event.startsWith("Dns.")
-                || event.contains("Digest") || event.startsWith("Mac.") || event.contains("HMAC");
+    private static boolean isMetadata(String event) {
+        return event.startsWith("Socket.") || event.startsWith("Dns.");
+    }
+
+    private static boolean isCryptoNoise(String event) {
+        return event.contains("Digest") || event.startsWith("Mac.") || event.contains("HMAC");
     }
 
     private static String normalizeSource(String source) {
@@ -122,13 +125,16 @@ final class LogEventReader {
         final LinkedHashMap<String, String> fields;
         final String raw;
         final boolean noise;
+        final boolean metadata;
 
-        Event(String source, String name, LinkedHashMap<String, String> fields, String raw, boolean noise) {
+        Event(String source, String name, LinkedHashMap<String, String> fields, String raw,
+              boolean noise, boolean metadata) {
             this.source = source;
             this.name = name;
             this.fields = fields;
             this.raw = raw;
             this.noise = noise;
+            this.metadata = metadata;
         }
 
         JSONObject toJson() throws JSONException {
@@ -139,6 +145,7 @@ final class LogEventReader {
             json.put("direction", direction(fields, name));
             json.put("raw", raw);
             json.put("noise", noise);
+            json.put("metadata", metadata);
             JSONObject allFields = new JSONObject();
             JSONArray payloads = new JSONArray();
             String hints = String.join(" ", fields.values());

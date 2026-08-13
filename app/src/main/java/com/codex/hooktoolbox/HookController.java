@@ -33,9 +33,16 @@ final class HookController {
         if (enabled) {
             script = "pkg=" + RootShell.quote(pkg) + "\n"
                     + "uid=$(cmd package list packages -U \"$pkg\" 2>/dev/null | sed -n 's/.* uid:\\([0-9][0-9]*\\).*/\\1/p' | head -n1); [ -n \"$uid\" ] || exit 2\n"
-                    + "mkdir -p " + RootShell.quote("/data/temp/pine-art-dumps/" + pkg) + "\n"
-                    + "chmod 0777 /data/temp/pine-art-dumps " + RootShell.quote("/data/temp/pine-art-dumps/" + pkg) + "\n"
-                    + "setprop debug.pine.art_dexdump_pkg \"$pkg\"\nsetprop debug.pine.art_dexdump 1\n";
+                    + "out=" + RootShell.quote("/data/temp/pine-art-dumps/" + pkg) + "\n"
+                    + "cache=" + RootShell.quote("/data/user/0/" + pkg + "/cache") + "\n"
+                    + "mkdir -p /data/temp/pine-art-dumps \"$out\"\n"
+                    + "ctx=$(ls -Zd \"$cache\" 2>/dev/null | awk '{print $1}')\n"
+                    + "chown \"$uid:$uid\" \"$out\"; chmod 0700 \"$out\"\n"
+                    + "[ -z \"$ctx\" ] || chcon \"$ctx\" \"$out\"\n"
+                    + "setprop persist.sys.pine_art_dexdump_pkg \"$pkg\"\n"
+                    + "setprop persist.sys.pine_art_dexdump true\n"
+                    + "setprop debug.pine.art_dexdump_pkg \"$pkg\"\n"
+                    + "setprop debug.pine.art_dexdump 1\n";
         } else {
             script = "setprop debug.pine.art_dexdump 0\nsetprop debug.pine.art_dexdump_pkg __disabled__\n"
                     + "setprop persist.sys.pine_art_dexdump false\n"
