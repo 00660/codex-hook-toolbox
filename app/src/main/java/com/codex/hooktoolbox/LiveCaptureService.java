@@ -27,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -56,6 +57,7 @@ public final class LiveCaptureService extends Service {
     private final ExecutorService workers = Executors.newCachedThreadPool();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final List<Process> processes = new ArrayList<>();
+    private final Set<Integer> rootTailPids = new HashSet<>();
     private final Object processLock = new Object();
     private WindowManager windowManager;
     private TextView floatingView;
@@ -164,6 +166,12 @@ public final class LiveCaptureService extends Service {
         running = false;
         active = false;
         synchronized (processLock) {
+            if (!rootTailPids.isEmpty()) {
+                StringBuilder command = new StringBuilder("kill");
+                for (int pid : rootTailPids) command.append(' ').append(pid);
+                RootShell.run(command.append(" 2>/dev/null || true").toString());
+                rootTailPids.clear();
+            }
             for (Process process : processes) process.destroy();
             processes.clear();
         }
@@ -172,12 +180,17 @@ public final class LiveCaptureService extends Service {
 
     private void readSource(String pkg, String source) {
         String path = "/sdcard/Android/data/" + pkg + "/files/dandelion-hot-dumps/" + source;
-        String script = "exec tail -n 0 -F " + RootShell.quote(path);
+        String quotedPath = RootShell.quote(path);
+        String script = "size=$(stat -c %s " + quotedPath + " 2>/dev/null || echo 0); "
+                + "echo $$; exec tail -c +$((size+1)) -F " + quotedPath;
         Process process = null;
+        int rootPid = -1;
         try {
             process = new ProcessBuilder("su", "-c", script).redirectErrorStream(true).start();
             synchronized (processLock) { processes.add(process); }
             InputStreamReader reader = new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8);
+            rootPid = readPidLine(reader);
+            if (rootPid > 0) synchronized (processLock) { rootTailPids.add(rootPid); }
             StringBuilder block = new StringBuilder();
             StringBuilder line = new StringBuilder();
             boolean drop = false;
@@ -221,9 +234,25 @@ public final class LiveCaptureService extends Service {
             if (running && pkg.equals(packageName)) state(false, pkg, source + ": " + e.getMessage());
         } finally {
             if (process != null) {
-                synchronized (processLock) { processes.remove(process); }
+                synchronized (processLock) {
+                    processes.remove(process);
+                    if (rootPid > 0) rootTailPids.remove(rootPid);
+                }
                 process.destroy();
             }
+        }
+    }
+
+    private static int readPidLine(InputStreamReader reader) throws IOException {
+        StringBuilder value = new StringBuilder();
+        int character;
+        while ((character = reader.read()) >= 0 && character != '\n' && value.length() < 16) {
+            if (character != '\r') value.append((char) character);
+        }
+        try {
+            return Integer.parseInt(value.toString().trim());
+        } catch (NumberFormatException ignored) {
+            throw new IOException("无法读取 root tail PID: " + value);
         }
     }
 
