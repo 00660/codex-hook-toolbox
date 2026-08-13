@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Codex Hook 工具箱</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="brand">CODEX / HOOK</div>
+      <h1 id="page-title">控制台</h1>
+    </div>
+    <button class="icon-button" id="refresh" title="刷新状态" aria-label="刷新状态">
+      <svg><use href="icons.svg#refresh-cw"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <section class="page active" data-page="overview">
+      <div class="target-row">
+        <label for="package">目标包名</label>
+        <div class="target-input">
+          <input id="package" value="com.moutai.mall" autocomplete="off" spellcheck="false">
+          <button class="icon-button solid" id="launch" title="启动目标应用" aria-label="启动目标应用">
+            <svg><use href="icons.svg#play"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="health-strip">
+        <span><i id="root-dot"></i>ROOT <b id="root-state">检测中</b></span>
+        <span><i id="process-dot"></i>进程 <b id="process-count">0</b></span>
+        <span><i id="watchdog-dot"></i>看门狗补丁 <b id="watchdog-state">检测中</b></span>
+      </div>
+
+      <section class="control-group">
+        <div class="section-heading">
+          <div><span class="eyebrow">SYSTEM CAPTURE</span><h2>系统采集</h2></div>
+          <span class="status-label" id="capture-target">未选定</span>
+        </div>
+        <div class="control-list">
+          <div class="control-row">
+            <div class="control-icon"><svg><use href="icons.svg#radio"/></svg></div>
+            <div class="control-copy"><strong>Crypto / HTTP</strong><small>ROM 外置 dandelion-hot 协议</small></div>
+            <label class="switch"><input id="hot-toggle" type="checkbox"><span></span></label>
+          </div>
+          <div class="control-row">
+            <div class="control-icon"><svg><use href="icons.svg#file-code"/></svg></div>
+            <div class="control-copy"><strong>ART DEX</strong><small>当前 APEX 属性与 /data/temp 产物</small></div>
+            <label class="switch"><input id="art-toggle" type="checkbox"><span></span></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="metrics">
+        <article><span>Java</span><b id="size-java">0 B</b></article>
+        <article><span>Conscrypt</span><b id="size-conscrypt">0 B</b></article>
+        <article><span>BoringSSL</span><b id="size-boringssl">0 B</b></article>
+        <article><span>HTTP</span><b id="size-http">0 B</b></article>
+        <article><span>DEX</span><b id="dex-files">0</b><small id="dex-size">0 B</small></article>
+        <article><span>Trace</span><b id="trace-node">不可用</b></article>
+      </section>
+
+      <button class="danger-button" id="stop-all">
+        <svg><use href="icons.svg#square"/></svg><span>停止全部采集</span>
+      </button>
+    </section>
+
+    <section class="page" data-page="events">
+      <div class="section-heading sticky-heading">
+        <div><span class="eyebrow">LIVE EVENTS</span><h2>实时事件</h2></div>
+        <button class="icon-button" id="reload-events" title="读取新增日志" aria-label="读取新增日志">
+          <svg><use href="icons.svg#refresh-cw"/></svg>
+        </button>
+      </div>
+      <div class="segmented" id="source-filter">
+        <button class="active" data-source="all">全部</button>
+        <button data-source="java">Java</button>
+        <button data-source="conscrypt">Conscrypt</button>
+        <button data-source="boringssl">BoringSSL</button>
+        <button data-source="http">HTTP</button>
+      </div>
+      <div class="event-summary">
+        <span id="event-count">0 条事件</span>
+        <label class="noise-toggle"><input id="include-noise" type="checkbox">显示 Digest/HMAC 噪声</label>
+        <span id="filtered-count">过滤 0 条噪声</span>
+      </div>
+      <div id="events" class="event-list">
+        <div class="empty-state"><svg><use href="icons.svg#activity"/></svg><p>尚未读取事件</p></div>
+      </div>
+    </section>
+
+    <section class="page" data-page="trace">
+      <div class="section-heading">
+        <div><span class="eyebrow">SYSCALL TRACE</span><h2>受控 Trace</h2></div>
+        <span class="status-label" id="trace-status">已停止</span>
+      </div>
+      <div class="trace-controls">
+        <label>范围</label>
+        <div class="segmented two">
+          <button class="active" data-scope="uid">目标 UID</button>
+          <button data-scope="pid">主进程 TGID</button>
+        </div>
+        <label for="trace-duration">时长 <b id="duration-value">5 秒</b></label>
+        <input id="trace-duration" type="range" min="3" max="30" value="5">
+        <div class="limits">
+          <span>速率上限 <b>250 条/秒</b></span>
+          <span>总量上限 <b>5000 条</b></span>
+        </div>
+        <div class="button-row">
+          <button class="primary-button" id="trace-start"><svg><use href="icons.svg#play"/></svg>开始</button>
+          <button class="secondary-button" id="trace-stop"><svg><use href="icons.svg#square"/></svg>停止</button>
+        </div>
+      </div>
+      <div class="trace-progress">
+        <div><span id="trace-elapsed">0 / 0 秒</span><span id="trace-lines">0 条</span></div>
+        <progress id="trace-progress" max="30" value="0"></progress>
+      </div>
+      <pre id="trace-output">Trace 输出将在任务结束后显示。</pre>
+    </section>
+
+    <section class="page" data-page="export">
+      <div class="section-heading">
+        <div><span class="eyebrow">EVIDENCE EXPORT</span><h2>证据导出</h2></div>
+      </div>
+      <div class="export-list">
+        <button data-export="logs"><svg><use href="icons.svg#logs"/></svg><span><strong>日志与派生明文</strong><small>原始尾部日志 + events.json</small></span><svg><use href="icons.svg#download"/></svg></button>
+        <button data-export="dex"><svg><use href="icons.svg#file-archive"/></svg><span><strong>内存 DEX</strong><small>按 SHA256 去重，保留 meta</small></span><svg><use href="icons.svg#download"/></svg></button>
+        <button data-export="so"><svg><use href="icons.svg#binary"/></svg><span><strong>运行时 SO</strong><small>maps + 磁盘映射 + 内存 ELF</small></span><svg><use href="icons.svg#download"/></svg></button>
+      </div>
+      <div class="export-result" id="export-result">导出文件写入 下载/CodexHookToolbox</div>
+    </section>
+
+    <section class="page" data-page="baseline">
+      <div class="section-heading">
+        <div><span class="eyebrow">ROM BASELINE</span><h2>真实基线</h2></div>
+      </div>
+      <div class="baseline-table" id="baseline"></div>
+      <pre id="baseline-json">等待探测</pre>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="active" data-target="overview"><svg><use href="icons.svg#gauge"/></svg><span>控制</span></button>
+    <button data-target="events"><svg><use href="icons.svg#activity"/></svg><span>事件</span></button>
+    <button data-target="trace"><svg><use href="icons.svg#scan-line"/></svg><span>Trace</span></button>
+    <button data-target="export"><svg><use href="icons.svg#download"/></svg><span>导出</span></button>
+    <button data-target="baseline"><svg><use href="icons.svg#list-check"/></svg><span>基线</span></button>
+  </nav>
+  <div id="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
