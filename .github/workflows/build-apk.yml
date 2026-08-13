@@ -18,7 +18,16 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: gradle
+      - name: 准备固定 Release 签名
+        env:
+          CODEX_KEYSTORE_BASE64: ${{ secrets.CODEX_KEYSTORE_BASE64 }}
+        run: printf '%s' "$CODEX_KEYSTORE_BASE64" | base64 --decode > app/release.keystore
       - name: 运行测试并构建 Release APK
+        env:
+          CODEX_KEYSTORE_PATH: release.keystore
+          CODEX_KEYSTORE_PASSWORD: ${{ secrets.CODEX_KEYSTORE_PASSWORD }}
+          CODEX_KEY_ALIAS: ${{ secrets.CODEX_KEY_ALIAS }}
+          CODEX_KEY_PASSWORD: ${{ secrets.CODEX_KEY_PASSWORD }}
         run: ./gradlew testReleaseUnitTest assembleRelease --no-daemon
       - uses: actions/upload-artifact@v4
         with:

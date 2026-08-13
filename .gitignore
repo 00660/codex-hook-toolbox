@@ -4,3 +4,5 @@ app/build/
 artifacts/
 local.properties
 *.iml
+*.jks
+*.keystore
