@@ -34,9 +34,9 @@ function requireControls() {
   }
 }
 
-function run(command, args, timeoutMs = 30000) {
+function run(command, args, timeoutMs = 30000, input = "") {
   return new Promise((resolve) => {
-    const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(command, args, { stdio: [input ? "pipe" : "ignore", "pipe", "pipe"] });
     let output = "";
     let timedOut = false;
     const timer = setTimeout(() => {
@@ -46,6 +46,7 @@ function run(command, args, timeoutMs = 30000) {
     child.stdout.on("data", (chunk) => { output += chunk; });
     child.stderr.on("data", (chunk) => { output += chunk; });
     child.on("error", (error) => { output += error.message; });
+    if (input) child.stdin.end(input);
     child.on("close", (code) => {
       clearTimeout(timer);
       resolve({ ok: code === 0 && !timedOut, code, output: output.trim(), timedOut });
@@ -60,7 +61,9 @@ async function adb(args, timeoutMs) {
 }
 
 async function root(script, timeoutMs = 30000) {
-  return adb(["shell", "su", "-c", script], timeoutMs);
+  const result = await run("adb", ["-s", device, "shell", "su", "0", "sh"], timeoutMs, `${script}\nexit\n`);
+  if (!result.ok) throw new Error(result.output || "root shell 操作失败");
+  return result.output;
 }
 
 async function packageUid(packageName) {
