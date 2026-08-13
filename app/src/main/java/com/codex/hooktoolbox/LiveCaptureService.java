@@ -181,8 +181,12 @@ public final class LiveCaptureService extends Service {
     private void readSource(String pkg, String source) {
         String path = "/sdcard/Android/data/" + pkg + "/files/dandelion-hot-dumps/" + source;
         String quotedPath = RootShell.quote(path);
+        int ownerPid = android.os.Process.myPid();
         String script = "size=$(stat -c %s " + quotedPath + " 2>/dev/null || echo 0); "
-                + "echo $$; exec tail -c +$((size+1)) -F " + quotedPath;
+                + "echo $$; tail -c +$((size+1)) -F " + quotedPath + " & child=$!; "
+                + "trap 'kill -9 $child 2>/dev/null' EXIT HUP INT TERM; "
+                + "while [ -d /proc/" + ownerPid + " ] && kill -0 $child 2>/dev/null; do sleep 1; done; "
+                + "kill -9 $child 2>/dev/null; exit 0";
         Process process = null;
         int rootPid = -1;
         try {
