@@ -25,7 +25,7 @@ final class RomProbe {
                 + "uid=$(cmd package list packages -U \"$pkg\" 2>/dev/null | sed -n 's/.* uid:\\([0-9][0-9]*\\).*/\\1/p' | head -n1)\n"
                 + "kv installed \"$([ -n \"$uid\" ] && echo 1 || echo 0)\"\n"
                 + "kv uid \"$uid\"\n"
-                + "pc=0; for p in /proc/[0-9]*; do n=$(tr '\\0' '\\n' <\"$p/cmdline\" 2>/dev/null | head -n1); case \"$n\" in \"$pkg\"|\"$pkg\":*) pc=$((pc+1));; esac; done; kv process_count \"$pc\"\n"
+                + "pc=$(ps -A -o NAME 2>/dev/null | awk -v p=\"$pkg\" '$1==p || index($1,p \":\")==1 {n++} END{print n+0}'); kv process_count \"$pc\"\n"
                 + "kv trace_exists \"$([ -e " + TRACE_NODE + " ] && echo 1 || echo 0)\"\n"
                 + "kv trace_readable \"$([ -r " + TRACE_NODE + " ] && echo 1 || echo 0)\"\n"
                 + "kv trace_writable \"$([ -w " + TRACE_NODE + " ] && echo 1 || echo 0)\"\n"

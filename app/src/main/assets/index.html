@@ -7,13 +7,28 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <svg class="svg-defs" aria-hidden="true">
+    <symbol id="refresh-cw" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-15.3-6.4L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.3 6.4L21 16"/><path d="M16 16h5v5"/></symbol>
+    <symbol id="play" viewBox="0 0 24 24"><path d="m6 3 14 9-14 9z"/></symbol>
+    <symbol id="square" viewBox="0 0 24 24"><rect width="14" height="14" x="5" y="5" rx="1"/></symbol>
+    <symbol id="radio" viewBox="0 0 24 24"><path d="M4.9 19.1a10 10 0 0 1 0-14.2"/><path d="M7.8 16.2a6 6 0 0 1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.5"/><path d="M19.1 4.9a10 10 0 0 1 0 14.2"/></symbol>
+    <symbol id="file-code" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z"/><polyline points="14 2 14 8 20 8"/><path d="m10 13-2 2 2 2"/><path d="m14 17 2-2-2-2"/></symbol>
+    <symbol id="activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+    <symbol id="download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></symbol>
+    <symbol id="logs" viewBox="0 0 24 24"><path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/></symbol>
+    <symbol id="file-archive" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z"/><polyline points="14 2 14 8 20 8"/><path d="M10 12v-1"/><path d="M10 18v-2"/><path d="M10 7V6"/><path d="M10 15h.01"/></symbol>
+    <symbol id="binary" viewBox="0 0 24 24"><rect x="14" y="14" width="4" height="6" rx="2"/><rect x="6" y="4" width="4" height="6" rx="2"/><path d="M6 20h4"/><path d="M14 10h4"/><path d="M6 14h2v6"/><path d="M14 4h2v6"/></symbol>
+    <symbol id="gauge" viewBox="0 0 24 24"><path d="m12 14 4-4"/><path d="M3.3 19a10 10 0 1 1 17.4 0"/><path d="M6.7 19h10.6"/></symbol>
+    <symbol id="scan-line" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></symbol>
+    <symbol id="list-check" viewBox="0 0 24 24"><path d="M11 18H3"/><path d="m15 18 2 2 4-4"/><path d="M16 12H3"/><path d="M16 6H3"/></symbol>
+  </svg>
   <header class="topbar">
     <div>
       <div class="brand">CODEX / HOOK</div>
       <h1 id="page-title">控制台</h1>
     </div>
     <button class="icon-button" id="refresh" title="刷新状态" aria-label="刷新状态">
-      <svg><use href="icons.svg#refresh-cw"/></svg>
+      <svg><use href="#refresh-cw"/></svg>
     </button>
   </header>
 
@@ -24,7 +39,7 @@
         <div class="target-input">
           <input id="package" value="com.moutai.mall" autocomplete="off" spellcheck="false">
           <button class="icon-button solid" id="launch" title="启动目标应用" aria-label="启动目标应用">
-            <svg><use href="icons.svg#play"/></svg>
+            <svg><use href="#play"/></svg>
           </button>
         </div>
       </div>
@@ -42,12 +57,12 @@
         </div>
         <div class="control-list">
           <div class="control-row">
-            <div class="control-icon"><svg><use href="icons.svg#radio"/></svg></div>
+            <div class="control-icon"><svg><use href="#radio"/></svg></div>
             <div class="control-copy"><strong>Crypto / HTTP</strong><small>ROM 外置 dandelion-hot 协议</small></div>
             <label class="switch"><input id="hot-toggle" type="checkbox"><span></span></label>
           </div>
           <div class="control-row">
-            <div class="control-icon"><svg><use href="icons.svg#file-code"/></svg></div>
+            <div class="control-icon"><svg><use href="#file-code"/></svg></div>
             <div class="control-copy"><strong>ART DEX</strong><small>当前 APEX 属性与 /data/temp 产物</small></div>
             <label class="switch"><input id="art-toggle" type="checkbox"><span></span></label>
           </div>
@@ -64,7 +79,7 @@
       </section>
 
       <button class="danger-button" id="stop-all">
-        <svg><use href="icons.svg#square"/></svg><span>停止全部采集</span>
+        <svg><use href="#square"/></svg><span>停止全部采集</span>
       </button>
     </section>
 
@@ -72,7 +87,7 @@
       <div class="section-heading sticky-heading">
         <div><span class="eyebrow">LIVE EVENTS</span><h2>实时事件</h2></div>
         <button class="icon-button" id="reload-events" title="读取新增日志" aria-label="读取新增日志">
-          <svg><use href="icons.svg#refresh-cw"/></svg>
+          <svg><use href="#refresh-cw"/></svg>
         </button>
       </div>
       <div class="segmented" id="source-filter">
@@ -88,7 +103,7 @@
         <span id="filtered-count">过滤 0 条噪声</span>
       </div>
       <div id="events" class="event-list">
-        <div class="empty-state"><svg><use href="icons.svg#activity"/></svg><p>尚未读取事件</p></div>
+        <div class="empty-state"><svg><use href="#activity"/></svg><p>尚未读取事件</p></div>
       </div>
     </section>
 
@@ -110,8 +125,8 @@
           <span>总量上限 <b>5000 条</b></span>
         </div>
         <div class="button-row">
-          <button class="primary-button" id="trace-start"><svg><use href="icons.svg#play"/></svg>开始</button>
-          <button class="secondary-button" id="trace-stop"><svg><use href="icons.svg#square"/></svg>停止</button>
+          <button class="primary-button" id="trace-start"><svg><use href="#play"/></svg>开始</button>
+          <button class="secondary-button" id="trace-stop"><svg><use href="#square"/></svg>停止</button>
         </div>
       </div>
       <div class="trace-progress">
@@ -126,9 +141,9 @@
         <div><span class="eyebrow">EVIDENCE EXPORT</span><h2>证据导出</h2></div>
       </div>
       <div class="export-list">
-        <button data-export="logs"><svg><use href="icons.svg#logs"/></svg><span><strong>日志与派生明文</strong><small>原始尾部日志 + events.json</small></span><svg><use href="icons.svg#download"/></svg></button>
-        <button data-export="dex"><svg><use href="icons.svg#file-archive"/></svg><span><strong>内存 DEX</strong><small>按 SHA256 去重，保留 meta</small></span><svg><use href="icons.svg#download"/></svg></button>
-        <button data-export="so"><svg><use href="icons.svg#binary"/></svg><span><strong>运行时 SO</strong><small>maps + 磁盘映射 + 内存 ELF</small></span><svg><use href="icons.svg#download"/></svg></button>
+        <button data-export="logs"><svg><use href="#logs"/></svg><span><strong>日志与派生明文</strong><small>原始尾部日志 + events.json</small></span><svg><use href="#download"/></svg></button>
+        <button data-export="dex"><svg><use href="#file-archive"/></svg><span><strong>内存 DEX</strong><small>按 SHA256 去重，保留 meta</small></span><svg><use href="#download"/></svg></button>
+        <button data-export="so"><svg><use href="#binary"/></svg><span><strong>运行时 SO</strong><small>maps + 磁盘映射 + 内存 ELF</small></span><svg><use href="#download"/></svg></button>
       </div>
       <div class="export-result" id="export-result">导出文件写入 下载/CodexHookToolbox</div>
     </section>
@@ -143,11 +158,11 @@
   </main>
 
   <nav class="bottom-nav">
-    <button class="active" data-target="overview"><svg><use href="icons.svg#gauge"/></svg><span>控制</span></button>
-    <button data-target="events"><svg><use href="icons.svg#activity"/></svg><span>事件</span></button>
-    <button data-target="trace"><svg><use href="icons.svg#scan-line"/></svg><span>Trace</span></button>
-    <button data-target="export"><svg><use href="icons.svg#download"/></svg><span>导出</span></button>
-    <button data-target="baseline"><svg><use href="icons.svg#list-check"/></svg><span>基线</span></button>
+    <button class="active" data-target="overview"><svg><use href="#gauge"/></svg><span>控制</span></button>
+    <button data-target="events"><svg><use href="#activity"/></svg><span>事件</span></button>
+    <button data-target="trace"><svg><use href="#scan-line"/></svg><span>Trace</span></button>
+    <button data-target="export"><svg><use href="#download"/></svg><span>导出</span></button>
+    <button data-target="baseline"><svg><use href="#list-check"/></svg><span>基线</span></button>
   </nav>
   <div id="toast" role="status"></div>
   <script src="app.js"></script>
