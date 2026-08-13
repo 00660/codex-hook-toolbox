@@ -18,6 +18,14 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: gradle
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: 安装并校验 MCP 服务
+        run: |
+          npm ci
+          npm run test:mcp
       - name: 准备固定 Release 签名
         env:
           CODEX_KEYSTORE_BASE64: ${{ secrets.CODEX_KEYSTORE_BASE64 }}

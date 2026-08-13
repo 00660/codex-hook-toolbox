@@ -11,7 +11,7 @@
   `debug.pine.art_dexdump*`，Crypto/HTTP 使用应用私有目录中的
   `dandelion-hot.*`，Trace 使用 `/proc/pine_syscall_trace`。
 - 不写入当前 ROM 不存在的 `/data/temp/pine-crypto-dump.*`。
-- 原始 Hex 始终保留，ASCII、UTF-8、GB18030、JSON、Gzip、Deflate 与 Brotli 结果属于派生视图。
+- 原始 Hex 始终保留，ASCII、UTF-8、明确声明的 GB18030/GBK/GB2312、JSON、Gzip、Deflate 与 Brotli 结果属于派生视图；未声明编码而无法按 UTF-8 解码的字节会标记为二进制或密文，不会伪造中文。
 
 实时抓包由前台服务从启动时 EOF 偏移持有四个常驻 `tail -c +<offset> -F` 流，只解析 Hook 新追加的完整记录。
 主界面和悬浮窗共享有界内存事件队列，不再周期性执行 `stat`、`su` 和文件尾全量读取。
@@ -22,3 +22,7 @@
 
 设备首次安装后，可通过 `device-grant-root.sh` 为工具箱当前 UID 写入既有
 root 管理器策略。脚本先保留策略库备份，只修改工具箱 UID 对应的一行。
+
+## MCP
+
+本项目提供本地 STDIO MCP 服务，完整使用方式见 [mcp/README.md](mcp/README.md)。它默认只读；用户明确同意后，通过 `authorize_controls(confirmed=true)` 放开当前 MCP 会话的全部工具箱控制能力和 Android Shell。授权仅限当前会话，并且只操作已配置设备。

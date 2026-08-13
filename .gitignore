@@ -2,6 +2,7 @@
 build/
 app/build/
 artifacts/
+node_modules/
 local.properties
 *.iml
 *.jks
